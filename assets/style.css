@@ -1,0 +1,60 @@
+:root {
+  --neves-yellow: #f4c400;
+  --neves-black: #161616;
+  --neves-gray: #f4f5f7;
+  --neves-border: #dedede;
+  --neves-ok: #12805c;
+  --neves-warn: #b7791f;
+  --neves-danger: #b42318;
+}
+
+.block-container {
+  padding-top: 1.5rem;
+}
+
+[data-testid="stSidebar"] {
+  background: #161616;
+}
+
+[data-testid="stSidebar"] * {
+  color: #ffffff;
+}
+
+.neves-title {
+  border-left: 8px solid var(--neves-yellow);
+  padding-left: 14px;
+}
+
+.metric-card {
+  border: 1px solid var(--neves-border);
+  border-radius: 8px;
+  padding: 14px;
+  background: #ffffff;
+  min-height: 116px;
+}
+
+.metric-card small {
+  color: #666;
+}
+
+.status-ok {
+  color: var(--neves-ok);
+  font-weight: 700;
+}
+
+.status-warn {
+  color: var(--neves-warn);
+  font-weight: 700;
+}
+
+.status-danger {
+  color: var(--neves-danger);
+  font-weight: 700;
+}
+
+.muted-box {
+  border: 1px solid var(--neves-border);
+  border-radius: 8px;
+  padding: 1rem;
+  background: var(--neves-gray);
+}

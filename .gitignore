@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+data/*.db-journal
+logs/*.log
+.streamlit/secrets.toml
