@@ -57,6 +57,12 @@ def clean_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def get_column(df: pd.DataFrame, column: str) -> pd.Series:
+    if column in df.columns:
+        return df[column]
+    return pd.Series([""] * len(df), index=df.index, dtype="string")
+
+
 def load_vendas(path: Path, valid_statuses: list[str] | None = None) -> tuple[pd.DataFrame, dict]:
     valid_statuses = valid_statuses or DEFAULT_VALID_STATUSES
     raw, meta = read_csv_flexible(path)
@@ -128,7 +134,7 @@ def load_estoque(path: Path) -> tuple[pd.DataFrame, dict]:
 
 
 def load_produtos(path: Path) -> tuple[pd.DataFrame, dict]:
-    header = find_header_row(path, ["CÃ³digo", "DescriÃ§Ã£o", "ReferÃªncia", "UND"])
+    header = find_header_row(path, ["Codigo", "Descricao", "Referencia", "UND"])
     raw, meta = read_csv_flexible(path, header=header)
     df = clean_columns(raw)
     df = df.dropna(how="all")
@@ -136,14 +142,14 @@ def load_produtos(path: Path) -> tuple[pd.DataFrame, dict]:
     for col in df.columns:
         if df[col].dtype == "object":
             df[col] = df[col].map(clean_text)
-    df = df[df.get("COD_PRODUTO", "").astype(str).str.strip().ne("")]
-    df["COD_PRODUTO"] = df.get("COD_PRODUTO", "").map(only_digits_code)
+    df = df[get_column(df, "COD_PRODUTO").astype(str).str.strip().ne("")]
+    df["COD_PRODUTO"] = get_column(df, "COD_PRODUTO").map(only_digits_code)
     meta.update(cabecalho_linha=header + 1, linhas_lidas=len(df), duplicidades=int(df.duplicated(subset=["COD_PRODUTO"]).sum()))
     return df, meta
 
 
 def load_clientes(path: Path) -> tuple[pd.DataFrame, dict]:
-    header = find_header_row(path, ["CÃ³d.", "RazÃ£o Social", "Nome", "Cidade", "Telefone", "Ult. compra"])
+    header = find_header_row(path, ["Cod", "Razao Social", "Nome", "Cidade", "Telefone", "Ult"])
     raw, meta = read_csv_flexible(path, header=header)
     df = clean_columns(raw)
     df = df.dropna(how="all")
@@ -160,8 +166,8 @@ def load_clientes(path: Path) -> tuple[pd.DataFrame, dict]:
     for col in df.columns:
         if df[col].dtype == "object":
             df[col] = df[col].map(clean_text)
-    df = df[df.get("COD_CLIENTE", "").astype(str).str.strip().ne("")]
-    df["COD_CLIENTE"] = df.get("COD_CLIENTE", "").map(only_digits_code)
+    df = df[get_column(df, "COD_CLIENTE").astype(str).str.strip().ne("")]
+    df["COD_CLIENTE"] = get_column(df, "COD_CLIENTE").map(only_digits_code)
     if "ULTIMA_COMPRA" in df.columns:
         df["ULTIMA_COMPRA"] = parse_date_series(df["ULTIMA_COMPRA"])
     meta.update(
