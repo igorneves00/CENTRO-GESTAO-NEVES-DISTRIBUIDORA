@@ -1,40 +1,80 @@
 :root {
-  --neves-yellow: #f4c400;
-  --neves-black: #161616;
-  --neves-gray: #f4f5f7;
-  --neves-border: #dedede;
+  --neves-yellow: #f2c200;
+  --neves-ink: #202124;
+  --neves-muted: #667085;
+  --neves-bg: #f7f8fa;
+  --neves-card: #ffffff;
+  --neves-border: #e6e8ec;
   --neves-ok: #12805c;
   --neves-warn: #b7791f;
   --neves-danger: #b42318;
 }
 
+.stApp {
+  background: var(--neves-bg);
+}
+
 .block-container {
-  padding-top: 1.5rem;
+  max-width: 1360px;
+  padding-top: 1.2rem;
+  padding-bottom: 2rem;
 }
 
 [data-testid="stSidebar"] {
-  background: #161616;
+  background: #ffffff;
+  border-right: 1px solid var(--neves-border);
 }
 
 [data-testid="stSidebar"] * {
-  color: #ffffff;
+  color: var(--neves-ink);
+}
+
+[data-testid="stSidebar"] img {
+  border-radius: 8px;
+  max-width: 132px;
+  margin: 0 auto 0.6rem auto;
+  display: block;
+}
+
+[data-testid="stSidebar"] [role="radiogroup"] label {
+  border-radius: 8px;
+  padding: 0.15rem 0.35rem;
 }
 
 .neves-title {
-  border-left: 8px solid var(--neves-yellow);
-  padding-left: 14px;
+  border-left: 6px solid var(--neves-yellow);
+  padding-left: 12px;
+  margin-bottom: 0.25rem;
+  color: var(--neves-ink);
+}
+
+h1, h2, h3 {
+  color: var(--neves-ink);
+  letter-spacing: 0;
 }
 
 .metric-card {
   border: 1px solid var(--neves-border);
   border-radius: 8px;
-  padding: 14px;
-  background: #ffffff;
-  min-height: 116px;
+  padding: 14px 16px;
+  background: var(--neves-card);
+  min-height: 104px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 
 .metric-card small {
-  color: #666;
+  color: var(--neves-muted);
+  font-size: 0.82rem;
+}
+
+.metric-card h3 {
+  margin: 0.25rem 0;
+  font-size: 1.35rem;
+}
+
+.metric-card p {
+  margin: 0;
+  font-size: 0.86rem;
 }
 
 .status-ok {
@@ -56,5 +96,11 @@
   border: 1px solid var(--neves-border);
   border-radius: 8px;
   padding: 1rem;
-  background: var(--neves-gray);
+  background: #ffffff;
+}
+
+[data-testid="stDataFrame"] {
+  border: 1px solid var(--neves-border);
+  border-radius: 8px;
+  overflow: hidden;
 }
