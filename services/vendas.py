@@ -14,11 +14,6 @@ def vendas_validas(vendas: pd.DataFrame) -> pd.DataFrame:
 def faturamento_sem_duplicar_total_pedido(vendas: pd.DataFrame) -> float:
     if vendas.empty:
         return 0.0
-    if "TOTAL_VENDA" in vendas and "VENDA" in vendas:
-        pedido = vendas.dropna(subset=["VENDA"]).drop_duplicates(subset=["VENDA"])
-        total = float(pedido["TOTAL_VENDA"].fillna(0).sum())
-        if total > 0:
-            return total
     return float(vendas.get("VALOR_ITEM", pd.Series(dtype=float)).fillna(0).sum())
 
 
@@ -26,7 +21,12 @@ def summary_metrics(vendas: pd.DataFrame, estoque: pd.DataFrame, clientes: pd.Da
     validas = vendas_validas(vendas)
     faturamento = faturamento_sem_duplicar_total_pedido(validas)
     pedidos = int(validas["VENDA"].nunique()) if "VENDA" in validas else 0
-    clientes_atendidos = int(validas["COD_CLIENTE"].nunique()) if "COD_CLIENTE" in validas else 0
+    if "COD_CLIENTE" in validas and validas["COD_CLIENTE"].astype(str).str.strip().any():
+        clientes_atendidos = int(validas["COD_CLIENTE"].nunique())
+    elif "RAZAO_SOCIAL" in validas:
+        clientes_atendidos = int(validas["RAZAO_SOCIAL"].replace("", pd.NA).dropna().nunique())
+    else:
+        clientes_atendidos = 0
     produtos_vendidos = float(validas["QTDE"].fillna(0).sum()) if "QTDE" in validas else 0.0
     ticket = safe_divide(faturamento, pedidos)
     valor_estoque = float(estoque.get("VALOR_ESTOQUE", pd.Series(dtype=float)).fillna(0).sum()) if not estoque.empty else 0.0

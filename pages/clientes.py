@@ -28,13 +28,20 @@ def render(ctx: dict) -> None:
     col3.metric("Em risco", int((clientes["STATUS"] == "Em risco").sum()))
     col4.metric("Inativos", int(clientes["STATUS"].isin(["Inativo", "Muito inativo"]).sum()))
     if not vendas.empty:
-        rank = vendas.groupby("COD_CLIENTE").agg(FATURAMENTO=("VALOR_ITEM", "sum"), PEDIDOS=("VENDA", "nunique"), QTDE=("QTDE", "sum")).reset_index()
-        rank = rank.merge(clientes, on="COD_CLIENTE", how="left")
+        key = "COD_CLIENTE"
+        if "COD_CLIENTE" not in vendas or not vendas["COD_CLIENTE"].astype(str).str.strip().any():
+            key = "RAZAO_SOCIAL"
+        rank = vendas.groupby(key).agg(FATURAMENTO=("VALOR_ITEM", "sum"), PEDIDOS=("VENDA", "nunique"), QTDE=("QTDE", "sum")).reset_index()
+        if key == "COD_CLIENTE":
+            rank = rank.merge(clientes, on="COD_CLIENTE", how="left")
+        elif "CIDADE" in vendas:
+            cidades = vendas.groupby(key)["CIDADE"].agg(lambda s: s.dropna().iloc[0] if not s.dropna().empty else "").reset_index()
+            rank = rank.merge(cidades, on=key, how="left")
         st.subheader("Ranking de clientes")
         st.dataframe(rank.sort_values("FATURAMENTO", ascending=False), width="stretch", hide_index=True)
-        selected = st.selectbox("Ficha individual", rank["COD_CLIENTE"].astype(str).tolist())
-        ficha = rank[rank["COD_CLIENTE"].astype(str) == selected].iloc[0]
-        st.write(f"**Cliente:** {ficha.get('RAZAO_SOCIAL', '')}")
+        selected = st.selectbox("Ficha individual", rank[key].astype(str).tolist())
+        ficha = rank[rank[key].astype(str) == selected].iloc[0]
+        st.write(f"**Cliente:** {ficha.get('RAZAO_SOCIAL', selected)}")
         st.write(f"**Cidade:** {ficha.get('CIDADE', '')} | **Telefone:** {ficha.get('TELEFONE', '')}")
         st.write(f"**Faturamento:** {brl(ficha['FATURAMENTO'])} | **Pedidos:** {int(ficha['PEDIDOS'])}")
         message = "Ola, tudo bem? Aqui e da Neves Distribuidora. Notamos que ja faz algum tempo desde sua ultima compra. Separei algumas oportunidades nos produtos que voce costuma utilizar. Posso enviar as condicoes?"

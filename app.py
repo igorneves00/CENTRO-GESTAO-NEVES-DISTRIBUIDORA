@@ -6,7 +6,7 @@ from pathlib import Path
 import streamlit as st
 import pandas as pd
 
-from pages import alertas, atualizacao, cidades, clientes, comercial, configuracoes, estoque, plano_acao, produtos, visao_geral
+from pages import alertas, auditoria, atualizacao, cidades, clientes, comercial, configuracoes, estoque, plano_acao, produtos, visao_geral
 from services.database import get_config, init_db
 from services.tratamento_dados import DEFAULT_VALID_STATUSES, build_relationship_diagnostics, load_all_data
 
@@ -43,8 +43,11 @@ def apply_global_filters(frames: dict[str, pd.DataFrame]) -> dict[str, pd.DataFr
     st.sidebar.markdown("### Filtros")
     min_date = vendas["DATA_VENDA"].dropna().min()
     max_date = vendas["DATA_VENDA"].dropna().max()
-    start = st.sidebar.date_input("Inicio", min_date.date() if pd.notna(min_date) else None)
-    end = st.sidebar.date_input("Fim", max_date.date() if pd.notna(max_date) else None)
+    use_date = st.sidebar.checkbox("Filtrar por data", value=False)
+    start = end = None
+    if use_date:
+        start = st.sidebar.date_input("Inicio", min_date.date() if pd.notna(min_date) else None)
+        end = st.sidebar.date_input("Fim", max_date.date() if pd.notna(max_date) else None)
 
     def multiselect(label: str, col: str):
         if col not in vendas:
@@ -56,7 +59,9 @@ def apply_global_filters(frames: dict[str, pd.DataFrame]) -> dict[str, pd.DataFr
     status = multiselect("Status", "STATUS_NORMALIZADO")
 
     cidade = []
-    if not clientes_df.empty and "CIDADE" in clientes_df:
+    if "CIDADE" in vendas and vendas["CIDADE"].astype(str).str.strip().any():
+        cidade = st.sidebar.multiselect("Cidade", sorted([x for x in vendas["CIDADE"].dropna().unique().tolist() if str(x).strip()]))
+    elif not clientes_df.empty and "CIDADE" in clientes_df:
         cidade = st.sidebar.multiselect("Cidade", sorted([x for x in clientes_df["CIDADE"].dropna().unique().tolist() if str(x).strip()]))
 
     with st.sidebar.expander("Mais filtros"):
@@ -96,7 +101,9 @@ def apply_global_filters(frames: dict[str, pd.DataFrame]) -> dict[str, pd.DataFr
             mask &= vendas[col].isin(selected)
     vendas = vendas[mask].copy()
 
-    if cidade and not clientes_df.empty:
+    if cidade and "CIDADE" in vendas:
+        vendas = vendas[vendas["CIDADE"].isin(cidade)].copy()
+    elif cidade and not clientes_df.empty:
         clientes_df = clientes_df[clientes_df["CIDADE"].isin(cidade)].copy()
         vendas = vendas[vendas["COD_CLIENTE"].isin(clientes_df["COD_CLIENTE"])].copy()
 
@@ -122,9 +129,18 @@ def main() -> None:
     if logo.exists():
         st.sidebar.image(str(logo), width="stretch")
     valid_statuses = st.sidebar.multiselect("Status validos para calculo", ["FATURADO", "PAGO", "CANCELADO", "DEVOLVIDO"], default=DEFAULT_VALID_STATUSES)
-    frames, metas, relationship = cached_load(tuple(valid_statuses or DEFAULT_VALID_STATUSES))
-    frames = apply_global_filters(frames)
+    raw_frames, metas, relationship = cached_load(tuple(valid_statuses or DEFAULT_VALID_STATUSES))
+    frames = apply_global_filters(raw_frames)
     meta_mensal = float(get_config("meta_mensal_empresa", "500000", DB_PATH) or 500000)
+    raw_vendas = raw_frames.get("vendas", pd.DataFrame())
+    filtered_vendas = frames.get("vendas", pd.DataFrame())
+    period_source = filtered_vendas if not filtered_vendas.empty else raw_vendas
+    if not period_source.empty and "DATA_VENDA" in period_source:
+        dates = pd.to_datetime(period_source["DATA_VENDA"], errors="coerce").dropna()
+        period = f"{dates.min().date()} ate {dates.max().date()}" if not dates.empty else "sem datas validas"
+    else:
+        period = "sem vendas carregadas"
+    st.info(f"Registros carregados: {len(raw_vendas):,} | Registros apos filtros: {len(filtered_vendas):,} | Periodo: {period}".replace(",", "."))
 
     page = st.sidebar.radio(
         "Menu",
@@ -137,11 +153,12 @@ def main() -> None:
             "Cidades",
             "Alertas",
             "Plano de Acao",
-            "Atualizacao de Dados",
+            "Adicionar arquivos",
+            "Auditoria dos Dados",
             "Configuracoes",
         ],
     )
-    context = {"root": PROJECT_ROOT, "db_path": DB_PATH, "frames": frames, "metas": metas, "relationship": relationship, "meta_mensal": meta_mensal}
+    context = {"root": PROJECT_ROOT, "db_path": DB_PATH, "frames": frames, "raw_frames": raw_frames, "metas": metas, "relationship": relationship, "meta_mensal": meta_mensal}
     routes = {
         "Visao Geral": visao_geral.render,
         "Comercial": comercial.render,
@@ -151,7 +168,8 @@ def main() -> None:
         "Cidades": cidades.render,
         "Alertas": alertas.render,
         "Plano de Acao": plano_acao.render,
-        "Atualizacao de Dados": atualizacao.render,
+        "Adicionar arquivos": atualizacao.render,
+        "Auditoria dos Dados": auditoria.render,
         "Configuracoes": configuracoes.render,
     }
     routes[page](context)
