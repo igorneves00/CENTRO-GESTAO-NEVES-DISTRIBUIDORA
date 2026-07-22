@@ -6,7 +6,7 @@ from pathlib import Path
 import streamlit as st
 import pandas as pd
 
-from pages import alertas, auditoria, atualizacao, cidades, clientes, comercial, configuracoes, estoque, plano_acao, produtos, visao_geral
+from views import alertas, auditoria, atualizacao, cidades, clientes, comercial, compras, configuracoes, estoque, inteligencia, plano_acao, produtos, visao_geral
 from services.database import get_config, init_db
 from services.tratamento_dados import DEFAULT_VALID_STATUSES, build_relationship_diagnostics, load_all_data
 
@@ -17,7 +17,7 @@ LOG_PATH.parent.mkdir(exist_ok=True)
 logging.basicConfig(filename=LOG_PATH, level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
-st.set_page_config(page_title="Centro de Gestao - Neves Distribuidora", page_icon="ND", layout="wide")
+st.set_page_config(page_title="Centro de Gestão - Neves Distribuidora", page_icon="ND", layout="wide")
 
 
 def load_css() -> None:
@@ -123,7 +123,7 @@ def apply_global_filters(frames: dict[str, pd.DataFrame]) -> dict[str, pd.DataFr
 def main() -> None:
     load_css()
     init_db(DB_PATH)
-    st.sidebar.markdown("## Centro de Gestao")
+    st.sidebar.markdown("## Centro de Gestão")
     st.sidebar.caption("Neves Distribuidora")
     logo = PROJECT_ROOT / "assets" / "logo.png"
     if logo.exists():
@@ -148,28 +148,39 @@ def main() -> None:
             "Visao Geral",
             "Comercial",
             "Clientes",
+            "Cidades",
             "Produtos",
             "Estoque",
-            "Cidades",
+            "Compras",
             "Alertas",
             "Plano de Acao",
-            "Adicionar arquivos",
-            "Auditoria dos Dados",
+            "Inteligencia",
+            "Auditoria",
+            "Atualizacao de Dados",
             "Configuracoes",
         ],
+        format_func=lambda item: {
+            "Visao Geral": "Visão Geral",
+            "Plano de Acao": "Plano de Ação",
+            "Inteligencia": "Inteligência",
+            "Atualizacao de Dados": "Atualização de Dados",
+            "Configuracoes": "Configurações",
+        }.get(item, item),
     )
     context = {"root": PROJECT_ROOT, "db_path": DB_PATH, "frames": frames, "raw_frames": raw_frames, "metas": metas, "relationship": relationship, "meta_mensal": meta_mensal}
     routes = {
         "Visao Geral": visao_geral.render,
         "Comercial": comercial.render,
         "Clientes": clientes.render,
+        "Cidades": cidades.render,
         "Produtos": produtos.render,
         "Estoque": estoque.render,
-        "Cidades": cidades.render,
+        "Compras": compras.render,
         "Alertas": alertas.render,
         "Plano de Acao": plano_acao.render,
-        "Adicionar arquivos": atualizacao.render,
-        "Auditoria dos Dados": auditoria.render,
+        "Inteligencia": inteligencia.render,
+        "Auditoria": auditoria.render,
+        "Atualizacao de Dados": atualizacao.render,
         "Configuracoes": configuracoes.render,
     }
     routes[page](context)
