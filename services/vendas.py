@@ -111,6 +111,10 @@ def compare_periods(vendas: pd.DataFrame, group_col: str | None = None) -> pd.Da
     return out
 
 
+def compare_periodos(vendas: pd.DataFrame, group_col: str | None = None) -> pd.DataFrame:
+    return compare_periods(vendas, group_col)
+
+
 def abc_by_group(vendas: pd.DataFrame, group_col: str, label_col: str | None = None) -> pd.DataFrame:
     validas = vendas_validas(vendas)
     if validas.empty or group_col not in validas:
