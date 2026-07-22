@@ -31,6 +31,16 @@ def render(ctx: dict) -> None:
     else:
         st.error(f"Diferenca encontrada: {brl(faturamento_dashboard - faturamento_arquivo)}")
 
+    st.subheader("Confianca da base")
+    col_a, col_b, col_c, col_d = st.columns(4)
+    vendas_meta = metas.get("vendas", {})
+    col_a.metric("Vendas", vendas_meta.get("situacao_leitura", ""))
+    col_b.metric("Faturamento", "OK" if round(faturamento_arquivo, 2) == round(faturamento_dashboard, 2) else "Verificar")
+    col_c.metric("Compras", metas.get("compras", {}).get("situacao_leitura", "AUSENTE"))
+    col_d.metric("Fornecedores", metas.get("fornecedores", {}).get("situacao_leitura", "AUSENTE"))
+    if not vendas_raw.empty and not vendas_raw.get("COD_PRODUTO", pd.Series(dtype=str)).astype(str).str.strip().any():
+        st.warning("A base atual de vendas nao contem produto/codigo do produto. Analises de produtos ficam limitadas.")
+
     st.subheader("Arquivos utilizados")
     rows = []
     for tipo, meta in metas.items():

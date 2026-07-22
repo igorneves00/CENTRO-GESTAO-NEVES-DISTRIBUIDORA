@@ -77,3 +77,52 @@ def ranking(vendas: pd.DataFrame, group_col: str, value_col: str = "VALOR_ITEM",
         return pd.DataFrame()
     return validas.groupby(group_col, dropna=False).agg(FATURAMENTO=(value_col, "sum"), PEDIDOS=("VENDA", "nunique"), QTDE=("QTDE", "sum")).sort_values("FATURAMENTO", ascending=False).head(top).reset_index()
 
+
+def vendas_do_dia(vendas: pd.DataFrame) -> float:
+    validas = vendas_validas(vendas)
+    if validas.empty:
+        return 0.0
+    ref = validas["DATA_VENDA"].max().date()
+    return float(validas[validas["DATA_VENDA"].dt.date == ref]["VALOR_ITEM"].fillna(0).sum())
+
+
+def compare_periods(vendas: pd.DataFrame, group_col: str | None = None) -> pd.DataFrame:
+    validas = vendas_validas(vendas)
+    if validas.empty or "DATA_VENDA" not in validas:
+        return pd.DataFrame()
+    validas = validas.dropna(subset=["DATA_VENDA"]).copy()
+    if validas.empty:
+        return pd.DataFrame()
+    end = validas["DATA_VENDA"].max()
+    start = validas["DATA_VENDA"].min()
+    days = max((end - start).days + 1, 1)
+    half = max(days // 2, 1)
+    split = end - pd.Timedelta(days=half)
+    atual = validas[validas["DATA_VENDA"] > split]
+    anterior = validas[validas["DATA_VENDA"] <= split]
+    if group_col and group_col in validas:
+        a = atual.groupby(group_col).agg(ATUAL=("VALOR_ITEM", "sum"), PEDIDOS_ATUAL=("VENDA", "nunique")).reset_index()
+        b = anterior.groupby(group_col).agg(ANTERIOR=("VALOR_ITEM", "sum"), PEDIDOS_ANTERIOR=("VENDA", "nunique")).reset_index()
+        out = a.merge(b, on=group_col, how="outer").fillna(0)
+    else:
+        out = pd.DataFrame([{"ATUAL": atual["VALOR_ITEM"].sum(), "ANTERIOR": anterior["VALOR_ITEM"].sum()}])
+    out["VARIACAO"] = out.apply(lambda row: safe_divide(row["ATUAL"] - row["ANTERIOR"], row["ANTERIOR"]) * 100 if row["ANTERIOR"] else 0, axis=1)
+    out["DIFERENCA"] = out["ATUAL"] - out["ANTERIOR"]
+    return out
+
+
+def abc_by_group(vendas: pd.DataFrame, group_col: str, label_col: str | None = None) -> pd.DataFrame:
+    validas = vendas_validas(vendas)
+    if validas.empty or group_col not in validas:
+        return pd.DataFrame()
+    agg = validas.groupby(group_col, dropna=False).agg(FATURAMENTO=("VALOR_ITEM", "sum"), PEDIDOS=("VENDA", "nunique")).reset_index()
+    agg = agg[agg[group_col].astype(str).str.strip().ne("")]
+    if agg.empty:
+        return agg
+    total = agg["FATURAMENTO"].sum()
+    agg = agg.sort_values("FATURAMENTO", ascending=False)
+    agg["PARTICIPACAO"] = agg["FATURAMENTO"] / total if total else 0
+    agg["ACUMULADO"] = agg["PARTICIPACAO"].cumsum()
+    agg["CURVA"] = pd.cut(agg["ACUMULADO"], bins=[0, 0.80, 0.95, 1.01], labels=["A", "B", "C"], include_lowest=True)
+    return agg
+

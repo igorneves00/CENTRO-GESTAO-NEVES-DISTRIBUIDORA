@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from services.vendas import vendas_validas
+from services.vendas import abc_by_group, compare_periods
 from utils.formatacao import brl
 
 
@@ -39,6 +40,19 @@ def render(ctx: dict) -> None:
             rank = rank.merge(cidades, on=key, how="left")
         st.subheader("Ranking de clientes")
         st.dataframe(rank.sort_values("FATURAMENTO", ascending=False), width="stretch", hide_index=True)
+        st.subheader("Clientes para acao comercial")
+        curva = abc_by_group(vendas, key)
+        if not curva.empty:
+            st.write("Curva ABC de clientes")
+            st.dataframe(curva.head(30), width="stretch", hide_index=True)
+        queda = compare_periods(vendas, key)
+        if not queda.empty:
+            queda = queda[(queda["ANTERIOR"] > 0) & (queda["VARIACAO"] < 0)].sort_values("VARIACAO").head(20)
+            st.write("Clientes que reduziram compra")
+            st.dataframe(queda, width="stretch", hide_index=True)
+        inativos = clientes[clientes["STATUS"].isin(["Inativo", "Muito inativo"])].sort_values("DIAS_SEM_COMPRAR", ascending=False)
+        st.write("Clientes inativos do cadastro")
+        st.dataframe(inativos[["COD_CLIENTE", "RAZAO_SOCIAL", "CIDADE", "TELEFONE", "ULTIMA_COMPRA", "DIAS_SEM_COMPRAR", "STATUS"]].head(50), width="stretch", hide_index=True)
         selected = st.selectbox("Ficha individual", rank[key].astype(str).tolist())
         ficha = rank[rank[key].astype(str) == selected].iloc[0]
         st.write(f"**Cliente:** {ficha.get('RAZAO_SOCIAL', selected)}")

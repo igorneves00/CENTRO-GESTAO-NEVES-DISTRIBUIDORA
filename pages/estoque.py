@@ -27,7 +27,7 @@ def render(ctx: dict) -> None:
     days = st.number_input("Dias de cobertura desejada", min_value=1, value=30)
     safety = st.number_input("Dias de seguranca", min_value=0, value=7)
     lead = st.number_input("Prazo medio de entrega", min_value=0, value=7)
-    if not vendas.empty:
+    if not vendas.empty and "COD_PRODUTO" in vendas and vendas["COD_PRODUTO"].astype(str).str.strip().any() and vendas["QTDE"].fillna(0).sum() > 0:
         period_days = max((vendas["DATA_VENDA"].max() - vendas["DATA_VENDA"].min()).days + 1, 1)
         consumo = vendas.groupby("COD_PRODUTO")["QTDE"].sum() / period_days
         crit = estoque.copy()
@@ -39,4 +39,8 @@ def render(ctx: dict) -> None:
         crit.loc[crit["CONSUMO_MEDIO_DIARIO"].eq(0), "PRIORIDADE"] = "Produto parado"
         crit.loc[(crit["CONSUMO_MEDIO_DIARIO"].gt(0)) & (crit["ESTOQUE_TOTAL"].le(crit["PONTO_REPOSICAO"])), "PRIORIDADE"] = "Compra imediata"
         st.dataframe(crit[["COD_PRODUTO", "DESCRICAO_ESTOQUE", "ESTOQUE_TOTAL", "CONSUMO_MEDIO_DIARIO", "DIAS_COBERTURA", "PONTO_REPOSICAO", "QUANTIDADE_SUGERIDA", "PRIORIDADE"]], width="stretch", hide_index=True)
+    else:
+        st.warning("A base atual de vendas nao possui produto/quantidade por item. Sugestao automatica de compra por consumo fica limitada.")
+        st.write("Produtos zerados ou abaixo de zero")
+        st.dataframe(estoque[estoque["ESTOQUE_TOTAL"] <= 0].sort_values("VALOR_ESTOQUE"), width="stretch", hide_index=True)
 
